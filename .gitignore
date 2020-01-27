@@ -1,0 +1,5 @@
+# These are basic gitignores that restricts you from committing your passwords stored in properties file by mistake
+**/*.properties
+**/*.ini
+**/*.config 
+**/*.props
