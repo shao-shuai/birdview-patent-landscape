@@ -25,6 +25,7 @@ import neo4j
 import logging
 from functools import reduce
 from pyspark.sql import DataFrame
+import os
 
 spark = SparkSession\
             .builder\
@@ -43,7 +44,7 @@ def get_publication_number(path):
 
 # construct file list to read
 def file_list(file_range):
-    base_path = 's3a://testbucket-shaoshuai/us_publications_20200121_' # should also keep this one confidential
+    base_path = os.environ['S3ADDRESS']
     data_path = [base_path + '{0:012}'.format(i) + '.json' for i in range(file_range)]
 
     return data_path
@@ -53,4 +54,4 @@ def file_list(file_range):
 data_path = file_list(1)
 shard_list = [get_publication_number(i) for i in data_path]
 
-#shard_list[0].show(10)
+shard_list[0].show(10)
