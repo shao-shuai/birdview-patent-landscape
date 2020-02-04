@@ -42,6 +42,14 @@ def get_publication_number(path):
 
     return publication_number
 
+# get publication number and company name of patent
+def get_publication_number_company(path):
+    patent = spark.read.json(path)
+    publication_number_company = patent \
+        .select(['publication_number', explode('assignee_harmonized.name')])
+
+    return publication_number_company
+
 # construct file list to read
 def file_list(file_range):
     base_path = os.environ['S3ADDRESS']
@@ -52,6 +60,6 @@ def file_list(file_range):
 
 # read file
 data_path = file_list(1)
-shard_list = [get_publication_number(i) for i in data_path]
+shard_list = [get_publication_number_company(i) for i in data_path]
 
 shard_list[0].show(10)
