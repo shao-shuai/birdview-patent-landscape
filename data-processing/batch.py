@@ -33,8 +33,8 @@ spark = SparkSession\
             .appName("read_data")\
             .getOrCreate()
 
-# get publication number of patent
 def get_publication_number(path):
+    """Get the publication number of patent."""
     patent = spark.read.json(path)
     publication_number = patent \
         .select(['publication_number']) \
@@ -42,24 +42,32 @@ def get_publication_number(path):
 
     return publication_number
 
-# get publication number and company name of patent
 def get_publication_number_company(path):
+    """Get publication nubmer and company name of patent."""
     patent = spark.read.json(path)
     publication_number_company = patent \
         .select(['publication_number', explode('assignee_harmonized.name')])
 
     return publication_number_company
 
-# construct file list to read
 def file_list(file_range):
+    """Construct file list for reading."""
     base_path = os.environ['S3ADDRESS']
     data_path = [base_path + '{0:012}'.format(i) + '.json' for i in range(file_range)]
 
     return data_path
 
+def get_backward_citation(path):
+    """Get backward citaion of a patent."""
+    patent = spark.read.json(path)
+    backward_citation = patent \
+        .withColumnRenamed('publication_number', 'pnum') \
+        .select(['pnum', explode('citation.publication_number')]) \
+        .filter(sf.col('col').contains('US'))
 
-# read file
+    return backward_citation
+
 data_path = file_list(1)
-shard_list = [get_publication_number_company(i) for i in data_path]
+shard_list = [get_backward_citation(i) for i in data_path]
 
 shard_list[0].show(10)
