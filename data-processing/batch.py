@@ -67,7 +67,35 @@ def get_backward_citation(path):
 
     return backward_citation
 
+def write_neo4j_constraint():
+    query='''CREATE CONSTRAINT ON (p:Patent) ASSERT p.name IS UNIQUE'''
+    with gradb.session() as session:
+        with session.begin_transaction() as tx:
+            tx.run(query)
+
+def write_neo4j_relationship(data):
+    query='''WITH $names AS nested
+    UNWIND nested AS x
+    MERGE (w:PATENT {name: x[0]})
+    MERGE (n:PATENT {name: x[1]})
+    MERGE (w)-[r:CITE]-(n)
+    '''
+    with gradb.session() as session:
+        with session.begin_transaction() as tx:
+            tx.run(query, names=data)
+
 data_path = file_list(1)
 shard_list = [get_backward_citation(i) for i in data_path]
 
 shard_list[0].show(10)
+
+test_relation = shard_list[0].collect()
+aa = [[i['pnum'], i['col']] for i in test_relation]
+
+uri = "bolt://ec2-44-232-97-138.us-west-2.compute.amazonaws.com:7687"
+gradb=GraphDatabase.driver(uri, auth=(os.environ['NEO4JUSER'], os.environ['NEO4JPASS']), encrypted=False)
+
+write_neo4j_constraint()
+print(aa[0:10])
+print("Start writing~~~~~~~~~~~~~~~~~~~~~")
+write_neo4j_relationship(aa)
