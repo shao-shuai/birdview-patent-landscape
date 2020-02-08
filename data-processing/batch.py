@@ -1,3 +1,4 @@
+import sys
 import boto3
 import pandas as pd
 from pyspark.sql import SparkSession
@@ -17,8 +18,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import json
-
 from neo4j import GraphDatabase
 import neo4j
 
@@ -26,6 +25,9 @@ import logging
 from functools import reduce
 from pyspark.sql import DataFrame
 import os
+
+logging.basicConfig(filename = 'write.log', level = logging.INFO,
+                    format = '%(asctime)s:%(levelname)s:%(message)s')
 
 spark = SparkSession\
             .builder\
@@ -50,10 +52,17 @@ def get_publication_number_company(path):
 
     return publication_number_company
 
-def file_list(file_range):
+def file_list(index_start, index_end):
     """Construct file list for reading."""
     base_path = os.environ['S3ADDRESS']
-    data_path = [base_path + '{0:012}'.format(i) + '.json' for i in range(file_range)]
+    data_path = [base_path + '{0:012}'.format(i) + '.json' for i in range(index_start, index_end)]
+
+    return data_path
+
+def single_file(file_index):
+    """Return the address of a single file."""
+    base_path = os.environ['S3ADDRESS']
+    data_path = base_path + '{0:012}'.format(file_index) + '.json'
 
     return data_path
 
@@ -68,12 +77,13 @@ def get_backward_citation(path):
     return backward_citation
 
 def write_neo4j_constraint():
-    query='''CREATE CONSTRAINT ON (p:Patent) ASSERT p.name IS UNIQUE'''
+    query='''CREATE CONSTRAINT ON (p:PATENT) ASSERT p.name IS UNIQUE'''
     with gradb.session() as session:
         with session.begin_transaction() as tx:
             tx.run(query)
 
 def write_neo4j_relationship(data):
+
     query='''WITH $names AS nested
     UNWIND nested AS x
     MERGE (w:PATENT {name: x[0]})
@@ -84,18 +94,24 @@ def write_neo4j_relationship(data):
         with session.begin_transaction() as tx:
             tx.run(query, names=data)
 
-data_path = file_list(1)
-shard_list = [get_backward_citation(i) for i in data_path]
+def write_database_relationship(path):
+    data = get_backward_citation(i)
+    data = data.collect()
+    relationship = [[i['pnum'], i['col']] for i in data]
+    write_neo4j_relationship(relationship)
+    relationship = []
 
-shard_list[0].show(10)
+if __name__ == '__main__':
 
-test_relation = shard_list[0].collect()
-aa = [[i['pnum'], i['col']] for i in test_relation]
+    gradb=GraphDatabase.driver(os.environ['NEO4JURI'], auth=(os.environ['NEO4JUSER'], os.environ['NEO4JPASS']), encrypted=False)
 
-uri = "bolt://ec2-44-232-97-138.us-west-2.compute.amazonaws.com:7687"
-gradb=GraphDatabase.driver(uri, auth=(os.environ['NEO4JUSER'], os.environ['NEO4JPASS']), encrypted=False)
+    data_path = file_list(int(sys.argv[1]), int(sys.argv[2]))
 
-write_neo4j_constraint()
-print(aa[0:10])
-print("Start writing~~~~~~~~~~~~~~~~~~~~~")
-write_neo4j_relationship(aa)
+    for i in data_path:
+        try:
+            write_database_relationship(i)
+            logging.info("Writing file " + i + " succeeded")
+        except:
+            logging.info("Writing file " + i + " failed")
+
+
