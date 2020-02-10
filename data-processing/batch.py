@@ -26,7 +26,7 @@ from functools import reduce
 from pyspark.sql import DataFrame
 import os
 
-logging.basicConfig(filename = 'write.log', level = logging.INFO,
+logging.basicConfig(filename = 'neo4j-4.log', level = logging.INFO,
                     format = '%(asctime)s:%(levelname)s:%(message)s')
 
 spark = SparkSession\
@@ -94,6 +94,8 @@ def write_neo4j_relationship(data):
         with session.begin_transaction() as tx:
             tx.run(query, names=data)
 
+#    MERGE (w)-[r:CITE]-(n)
+
 def write_database_relationship(path):
     data = get_backward_citation(i)
     data = data.collect()
@@ -107,11 +109,13 @@ if __name__ == '__main__':
 
     data_path = file_list(int(sys.argv[1]), int(sys.argv[2]))
 
+#    write_neo4j_constraint()
+
     for i in data_path:
         try:
             write_database_relationship(i)
             logging.info("Writing file " + i + " succeeded")
-        except:
+        except Exception:
             logging.info("Writing file " + i + " failed")
 
 
