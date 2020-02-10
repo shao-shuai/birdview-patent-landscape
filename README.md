@@ -32,9 +32,9 @@ Patent Vista is a data pipeline designed to visualizaing patent citation relatio
 
 ---
 
-![](data pipeline.jpg)
+![](data-pipeline.jpg)
 
-1. 1.5 TB data is [migrated](/birdview-patent-landscape/ingestion/README.md) from Google Cloud to Amazon S3
+1. 1.5 TB data is [migrated](https://github.com/shao-shuai/birdview-patent-landscape/blob/master/ingestion/README.md) from Google Cloud to Amazon S3
 2. The data is splitted into 1667 batches, each batch is 1 GB
 3. The batch data is fetched into Apache Spark for batch processing
 4. The result of the batch processing is sotred into Neo4j to visualizaing relatinships
