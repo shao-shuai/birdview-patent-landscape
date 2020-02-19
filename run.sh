@@ -10,6 +10,6 @@ spark-submit \
     --conf "spark.cores.max=15" \
     --conf "spark.executor.cores=5" \
     --jars /usr/local/spark/jars/aws-java-sdk-bundle-1.11.375.jar,/usr/local/spark/jars/hadoop-aws-3.2.0.jar \
-    ./data-processing/batch.py 907 1666
+    ./data-processing/batch.py 1584 1667
    # ./data-processing/batch.py 805 806
 
