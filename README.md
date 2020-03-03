@@ -4,7 +4,7 @@ A bird's-eye view of patent landscape.
 
 Click [here](https://docs.google.com/presentation/d/1GYmk3EMiETBooWJDNu6uFWAWcya_pcZEPCu1biHSnyw/edit#slide=id.gc6f73a04f_0_0) to see my presentation.
 
-Click [here](https://www.youtube.com/watch?v=ZnaQDp0qMWM) to see a video demo.
+Click [here](https://www.youtube.com/watch?v=mJf5L2jHnGw) to see a video demo.
 
 #### How to install and get it up and running
 
