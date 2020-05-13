@@ -20,7 +20,7 @@ from functools import reduce
 from pyspark.sql import DataFrame
 import os
 
-logging.basicConfig(filename = 'write_company.log', level = logging.INFO,
+logging.basicConfig(filename = 'write_title.log', level = logging.INFO,
                     format = '%(asctime)s:%(levelname)s:%(message)s')
 
 spark = SparkSession\
@@ -47,6 +47,15 @@ def get_publication_number_company(path):
         .select(['publication_number', 'assignee_harmonized.name']) \
         .withColumn('name', join_udf(col("name")))
     return publication_number_company
+
+def get_publication_number_title(path):
+    """Get publication number and title of patent."""
+
+    patent = spark.read.json(path)
+    publication_number_title = patent \
+        .select(['publication_number', explode('title_localized.text')])
+
+    return publication_number_title
 
 def file_list(index_start, index_end):
     """Construct a list of file path on S3."""
@@ -123,27 +132,57 @@ def write_database_property_company(path):
     relationship = []
 
 
+def write_title_session(data):
+    '''Writing property company name for each node.'''
+
+    query = '''WITH $names AS nested
+    UNWIND nested AS x
+    MATCH (n:PATENT {name: x[0]})
+    SET n.title=x[1]
+    '''
+
+    with gradb.session() as session:
+        with session.begin_transaction() as tx:
+            tx.run(query, names=data)
+
+def write_database_property_title(path):
+    '''Function for writing title of patent.'''
+
+    data = get_publication_number_title(path)
+    data = data.collect()
+    relationship = [[i['publication_number'], i['col']] for i in data]
+    write_title_session(relationship)
+    relationship = []
+
 if __name__ == '__main__':
 
     gradb=GraphDatabase.driver(os.environ['NEO4JURI'], auth=(os.environ['NEO4JUSER'], os.environ['NEO4JPASS']), encrypted=False)
 
     data_path = file_list(int(sys.argv[1]), int(sys.argv[2]))
 
+#    for i in data_path:
+#        '''Loop for writing relationship.'''
+#
+#        try:
+#            write_database_property_company(i)
+#            logging.info("Writing company " + i + " succeeded")
+#        except Exception:
+#             logging.info("Writing company " + i + " failed")
+#
+#    for i in data_path:
+#        '''Loop for writing company name as property of each node.'''
+#
+#        try:
+#            write_database_relationship(i)
+#            logging.info("Writing file " + i + " succeeded")
+#        except Exception:
+#            logging.info("Writing file " + i + " failed")
+
     for i in data_path:
-        '''Loop for writing relationship.'''
+        '''Loop for writing title.'''
 
         try:
-            write_database_property_company(i)
-            logging.info("Writing company " + i + " succeeded")
+            write_database_property_title(i)
+            logging.info("Writing title " + i + " succeeded")
         except Exception:
-             logging.info("Writing company " + i + " failed")
-
-    for i in data_path:
-        '''Loop for writing company name as property of each node.'''
-
-        try:
-            write_database_relationship(i)
-            logging.info("Writing file " + i + " succeeded")
-        except Exception:
-            logging.info("Writing file " + i + " failed")
-
+             logging.info("Writing title" + i + " failed")
